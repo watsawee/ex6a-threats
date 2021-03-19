@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <title><%= title %></title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+  <body>
+    <div class="container-fluid">
+      <h2>Heroes-Threats Microservices</h2> 
+      <br><br>
+      <div class="dropdown">
+		  <button class="btn btn-success dropdown-toggle" type="button" data-toggle="dropdown">
+		  	Select a threat
+		  <span class="caret"></span></button>
+		  <ul class="dropdown-menu">
+		    <li><a href="#" onClick="selThreat(1)" id="t1">Pisa tower is about to collapse.</a></li>
+		    <li><a href="#" onClick="selThreat(2)" id="t2">Engineer is going to clean up server-room.</a></li>
+		    <li onClick="selThreat(3)"><a href="#" id="t3">John will not understand the joke</a></li>
+		  </ul>
+	  </div>
+	  <br><br>
+	  <input type="text" class="form-control" id="tDisp" placeholder="... Threat selected ..." readOnly>
+	  <input type="hidden" class="form-control" id="tID">
+	  <br><br>
+      <div class="dropdown">
+		  <button class="btn btn-success dropdown-toggle" type="button" data-toggle="dropdown">
+		  	Select a hero &nbsp;
+		  <span class="caret"></span></button>
+		  <ul class="dropdown-menu">
+		    <li><a href="#" onClick="selHero(1)" id="h1">super-dog</a></li>
+		    <li><a href="#" onClick="selHero(2)" id="h2">super-horse</a></li>
+		    <li><a href="#" onClick="selHero(3)" id="h3">super-cat</a></li>
+		    <li><a href="#" onClick="selHero(4)" id="h4">super-hamster</a></li>
+		  </ul>
+	  </div>
+	  <br><br>
+	  <input type="text" class="form-control" id="hDisp" placeholder="... Hero selected ..." readOnly>
+	  <input type="hidden" class="form-control" id="hID">
+	  <br><br>
+		<button type="button" class="btn btn-primary" onClick="assignHero()">:: Assign Hero ::</button> 
+		<button type="button" class="btn btn-primary" onClick="clearAssign()">:: Clear Assignment ::</button>             
+	<!--xxxxxxxxxxxxxxxxxxxxxxxxxx-->
+	<hr>
+	<br><br>
+	<div class="table-responsive-sm">
+	<table class="table table-hover" id="dispTable" >
+        <thead>
+          <tr>
+            <th>Threats</th>
+            <th>Necessary Powers</th>
+            <th>Heroes</th>
+            <th>Heroes Powers</th>
+          </tr>
+        </thead>
+        <tbody id="tBody">
+        </tbody>
+    </table>
+	</div>
+   </div>
+<!--xxxxxxxxxxxxxxxxxxxxxxxxxxx-->
+<script>
+	var heroes;
+	var powers;
+
+	function selThreat(id){
+			var x = document.getElementById("t"+id).textContent;
+			$("#tDisp").val(x); 
+			$("#tID").val(id); 
+	}
+	function selHero(id){
+			var x = document.getElementById("h"+id).textContent;
+			$("#hDisp").val(x); 
+			$("#hID").val(id); 
+	}
+	function clearForm(){
+			$("#tDisp").val(""); 
+			$("#tID").val(""); 
+			$("#hDisp").val(""); 
+			$("#hID").val(""); 
+	}
+
+    function listThreats(){
+    	$.get("http://localhost:3000/threats",function(data,status){
+          htmlText = "";
+          for(i=0; i<data.length; i++){
+            nPowers = data[i].necessaryPowers;
+            img = data[i].img;
+            assignedHero = data[i].assignedHero;
+            if(assignedHero != 0){
+            	var hero = heroes.find(subject => subject.id == assignedHero);
+            	var hPowers = "";
+            	for (let j in hero.powers) {
+            		pid = hero.powers[j];
+            		hPowers += powers[pid - 1].name + " | ";
+            	}
+            	htmlText += "<tr>";
+            	htmlText += "<td><img src='images/"+img+"' width='230' height='230'></td>";
+            	htmlText += "<td>"+nPowers+"</td>";
+            	htmlText += "<td><img src='http://localhost:3001/images/"+hero.img+"' width='230' height='230'></td>";
+            	htmlText += "<td>"+hPowers+"</td>";
+            	htmlText += "</tr>";
+        	}
+          }
+          $("#tBody").html(htmlText);
+        });
+    }
+
+    function loadHeroes(){
+    	$.get("http://localhost:3001/heroes").done(function (data) {
+          	heroes = data;
+		});
+    }
+
+    function loadPowers(){
+    	$.get("http://localhost:3001/powers").done(function (data) {
+          	powers = data;
+		});
+    }
+
+    $(document).ready(function(){
+	  loadHeroes();
+	  loadPowers();
+	});
+
+	//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+	function clearAssign(){
+      var r = confirm("Please confirm before clearing assignments!");
+      if (r == true) {
+      	clearForm();
+        $.ajax({
+          url: "http://localhost:3000/assignment",
+          method: "PUT",
+          success: function(result){
+            listThreats();
+          }
+        });
+      }//end if
+	}
+
+	function assignHero(){
+        var data = {
+          "heroId": $("#hID").val(),
+          "threatId": $("#tID").val(),
+        }
+        $.post("http://localhost:3000/assignment",data,function(data,status){
+          console.log("assignHero: " + JSON.stringify(data) + "\nStatus: " + status);
+          if(status == "success"){
+          		listThreats();
+          }
+      });
+    }
+</script>  
+</body>
+</html>
